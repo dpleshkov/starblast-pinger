@@ -7,6 +7,7 @@ const axios = require("axios");
 
 let sendJSON = (connection, json) => {
     if (connection.connected) {
+        //console.log("Sending:", JSON.stringify(json));
         connection.sendUTF(JSON.stringify(json));
     }
 }
@@ -50,12 +51,15 @@ let getWebsocketAddress = async function (url) {
     }
 }
 
-let getSystemInfo = async function (url) {
+let getSystemInfo = async function (url, players, playersTimeout) {
     if (!url) {
         return;
     }
     let address = await getWebsocketAddress(url);
     let id = Number(url.split("#")[1].split("@")[0]);
+    let welcomeMessage;
+    playersTimeout = playersTimeout || 2000;
+    players = players || false;
     if (address) {
         return new Promise((resolve, reject) => {
             let client = new WebSocketClient();
@@ -70,11 +74,45 @@ let getSystemInfo = async function (url) {
                 connection.on('close', function () {
                 });
                 connection.on('message', function (message) {
-                    if (message.type === 'utf8') {
-                        connection.close();
-                        resolve(JSON.parse(message.utf8Data).data);
+                    if (message.type === 'utf8' && message.utf8Data.startsWith("{")) {
+                        //console.log("Received: ",message.utf8Data);
+                        let parsedMessage = JSON.parse(message.utf8Data);
+                        if (parsedMessage.name === "welcome") {
+                            welcomeMessage = parsedMessage.data;
+                            //console.log(parsedMessage);
+                            //console.log("players", players)
+                            welcomeMessage.players = {};
+                            if (players) {
+                                //console.log("OK");
+                                parsedMessage.data.mode.max_players = parsedMessage.data.mode.max_players || 0;
+                                let maxPlayers = parsedMessage.data.mode.max_players;
+                                //console.log("max players",maxPlayers)
+                                for (let x=0; x<=maxPlayers; x++) {
+                                    sendJSON(connection, {
+                                        "name": "get_name",
+                                        "data": {
+                                            "id": x
+                                        }
+                                    });
+                                }
+                                setTimeout(() => {
+                                    connection.close();
+                                    resolve(welcomeMessage);
+                                }, playersTimeout);
+                            } else {
+                                connection.close();
+                                resolve(JSON.parse(message.utf8Data).data);
+                            }
+                        } else if (parsedMessage.name === "player_name") {
+                            welcomeMessage.players[parsedMessage.data.id] = parsedMessage.data;
+                            if (welcomeMessage.players.length === welcomeMessage.mode.max_players) {
+                                resolve(welcomeMessage);
+                            }
+                        }
+                        // connection.close();
+                        // resolve(JSON.parse(message.utf8Data).data);
                     } else {
-                        reject("Invalid response from server.")
+                        // reject("Invalid response from server.")
                     }
                 });
                 sendJSON(connection, {

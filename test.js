@@ -1,3 +1,3 @@
 const pinger = require("./index");
 
-pinger.getSystemInfo("https://starblast.io/#6373").then(console.log);
+pinger.getSystemInfo("https://starblast.io/#5897", true).then(console.log);

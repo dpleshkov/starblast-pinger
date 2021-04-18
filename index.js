@@ -5,6 +5,26 @@
 const WebSocketClient = require("websocket").client;
 const axios = require("axios");
 
+/**
+ * String.prototype.replaceAll() polyfill
+ * https://gomakethings.com/how-to-replace-a-section-of-a-string-with-another-one-with-vanilla-js/
+ * @author Chris Ferdinandi
+ * @license MIT
+ */
+if (!String.prototype.replaceAll) {
+    String.prototype.replaceAll = function(str, newStr){
+
+        // If a regex pattern
+        if (Object.prototype.toString.call(str).toLowerCase() === '[object regexp]') {
+            return this.replace(str, newStr);
+        }
+
+        // If a string
+        return this.replace(new RegExp(str, 'g'), newStr);
+
+    };
+}
+
 let sendJSON = (connection, json) => {
     if (connection.connected) {
         //console.log("Sending:", JSON.stringify(json));
@@ -58,7 +78,7 @@ let getSystemInfo = async function (url, players, playersTimeout) {
     let address = await getWebsocketAddress(url);
     let id = Number(url.split("#")[1].split("@")[0]);
     let welcomeMessage;
-    playersTimeout = playersTimeout || 2000;
+    playersTimeout = playersTimeout || 1000;
     players = players || false;
     if (address) {
         return new Promise((resolve, reject) => {

@@ -94,3 +94,7 @@ If successful, it should return something akin to this (players object is only p
 
 }
 ```
+
+If you're not interested in any detailed info, a method `.systemExists` takes in a system URL and returns a `Promise<Boolean>`
+which resolves to `true` is a system exists and can be joined, and `false` if a system doesn't exist or
+could not be joined.

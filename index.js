@@ -43,6 +43,9 @@ let getWebsocketAddress = async function (url) {
         return;
     }
     let address = url.split("#")[1];
+    if (!address) {
+        return;
+    }
     if (address.split("@").length === 1) {
         let id = Number(address);
         let simstatus = await getSimstatus();
@@ -69,6 +72,60 @@ let getWebsocketAddress = async function (url) {
         ip = ip.replaceAll(".", "-");
         return `wss://${ip}.starblast.io:${port}/`;
     }
+}
+
+let doesSystemExist = async function(url) {
+    if (!url) {
+        return false;
+    }
+    let address = await getWebsocketAddress(url);
+    if (!address) {
+        return false;
+    }
+    let id = Number(url.split("#")[1].split("@")[0]);
+    if (!id) {
+        return false;
+    }
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {resolve(false)}, 5000);
+        let client = new WebSocketClient();
+        client.on = client.on || function () {};
+        client.on('connectFailed', (error) => {
+            reject('Connect Error: ' + error.toString());
+        });
+        client.on("connect", (connection) => {
+            connection.on("error", (error) => {
+                reject('Connection Error: ' + error.toString());
+            });
+            connection.on("message", (message) => {
+                if (message.type === 'utf8' && message.utf8Data.startsWith("{")) {
+                    let parsedMessage = JSON.parse(message.utf8Data);
+                    if (parsedMessage.name === "welcome") {
+                        connection.close();
+                        resolve(true);
+                    } else if (parsedMessage.name === "cannot_join") {
+                        resolve(false);
+                    }
+                }
+            });
+            sendJSON(connection, {
+                "name": "join",
+                "data": {
+                    "spectate": false,
+                    "spectate_ship": 1,
+                    "player_name": "PING",
+                    "hue": 240,
+                    "preferred": id,
+                    "bonus": "true",
+                    "steamid": null,
+                    "create": false,
+                    "client_ship_id": String(Math.random()).slice(2),
+                    "client_tr": 2.799774169921875
+                }
+            });
+        });
+        client.connect(address, 'echo-protocol', "https://starblast.io");
+    });
 }
 
 let getSystemInfo = async function (url, players, playersTimeout) {
@@ -146,7 +203,7 @@ let getSystemInfo = async function (url, players, playersTimeout) {
                         "bonus": "true",
                         "steamid": null,
                         "create": false,
-                        "client_ship_id": "35574142321707652006",
+                        "client_ship_id": String(Math.random()).slice(2),
                         "client_tr": 2.799774169921875
                     }
                 });
@@ -161,3 +218,4 @@ let getSystemInfo = async function (url, players, playersTimeout) {
 
 module.exports.getSystemInfo = getSystemInfo;
 module.exports.getSimstatus = getSimstatus;
+module.exports.systemExists = doesSystemExist;

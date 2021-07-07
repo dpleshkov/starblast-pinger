@@ -139,6 +139,7 @@ let getSystemInfo = async function (url, players, playersTimeout) {
     players = players || false;
     if (address) {
         return new Promise((resolve, reject) => {
+            setTimeout(() => {resolve({})}, 5000);
             let client = new WebSocketClient();
             client.on = client.on || function () {};
             client.on('connectFailed', function (error) {
@@ -154,6 +155,9 @@ let getSystemInfo = async function (url, players, playersTimeout) {
                     if (message.type === 'utf8' && message.utf8Data.startsWith("{")) {
                         //console.log("Received: ",message.utf8Data);
                         let parsedMessage = JSON.parse(message.utf8Data);
+                        if (parsedMessage.name === "cannot_join") {
+                            resolve({});
+                        }
                         if (parsedMessage.name === "welcome") {
                             welcomeMessage = parsedMessage.data;
                             //console.log(parsedMessage);

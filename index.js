@@ -168,7 +168,7 @@ let getSystemInfo = async function (url, players, playersTimeout) {
                                 parsedMessage.data.mode.max_players = parsedMessage.data.mode.max_players || 0;
                                 let maxPlayers = parsedMessage.data.mode.max_players;
                                 //console.log("max players",maxPlayers)
-                                for (let x=0; x<=maxPlayers; x++) {
+                                for (let x=0; x<=maxPlayers*3; x++) {
                                     sendJSON(connection, {
                                         "name": "get_name",
                                         "data": {

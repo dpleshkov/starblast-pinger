@@ -1,6 +1,6 @@
 {
   "name": "starblast-pinger",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "description": "Utility tool to ping and get the info of a running Starblast game lobby.",
   "main": "index.js",
   "scripts": {
@@ -9,11 +9,14 @@
   "author": "Dmitry Pleshkov",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.21.1",
-    "websocket": "^1.0.34"
+    "axios": "^0.26.0",
+    "ws": "^8.5.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/dpleshkov/starblast-pinger.git"
+  },
+  "engines": {
+    "node": ">=15.0.0"
   }
 }

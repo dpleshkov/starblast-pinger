@@ -1,56 +1,29 @@
-// Starblast Server Pinger
+// starblast-pinger
 // Copyright 2021 Dmitry Pleshkov
 
-
-const WebSocketClient = require("websocket").client;
+const {WebSocket} = require("ws");
 const axios = require("axios");
 
-/**
- * String.prototype.replaceAll() polyfill
- * https://gomakethings.com/how-to-replace-a-section-of-a-string-with-another-one-with-vanilla-js/
- * @author Chris Ferdinandi
- * @license MIT
- */
-if (!String.prototype.replaceAll) {
-    String.prototype.replaceAll = function(str, newStr){
-
-        // If a regex pattern
-        if (Object.prototype.toString.call(str).toLowerCase() === '[object regexp]') {
-            return this.replace(str, newStr);
-        }
-
-        // If a string
-        return this.replace(new RegExp(str, 'g'), newStr);
-
-    };
+// Returns simstatus.json
+const getSimStatus = async function () {
+    let response = await axios.get(`https://starblast.io/simstatus.json?cachebypass=${Math.random()}`);
+    return response.data || [];
 }
 
-let sendJSON = (connection, json) => {
-    if (connection.connected) {
-        //console.log("Sending:", JSON.stringify(json));
-        connection.sendUTF(JSON.stringify(json));
-    }
-}
-
-let getSimstatus = async function () {
-    let response = await axios.get("https://starblast.io/simstatus.json");
-    response.data = response.data || [];
-    return response.data;
-}
-
-let getWebsocketAddress = async function (url) {
+// Gets websocket address given game link
+const getWebSocketAddress = async function (url = String()) {
     if (!url) {
-        return;
+        throw new TypeError("System URL not provided.");
     }
     let address = url.split("#")[1];
     if (!address) {
-        return;
+        throw new TypeError("Invalid URL provided. Make sure system URL is in the form \"https://starblast.io/#1234\"");
     }
     if (address.split("@").length === 1) {
         let id = Number(address);
-        let simstatus = await getSimstatus();
-        for (let locationIndex in simstatus) {
-            let location = simstatus[locationIndex];
+        let simStatus = await getSimStatus();
+        for (let locationIndex in simStatus) {
+            let location = simStatus[locationIndex];
             let exit = false;
             for (let systemIndex in location.systems) {
                 let system = location.systems[systemIndex];
@@ -61,9 +34,7 @@ let getWebsocketAddress = async function (url) {
                     return `wss://${ip}.starblast.io:${port}/`;
                 }
             }
-            if (exit) {
-                break;
-            }
+            if (exit) break;
         }
     } else if (address.split("@").length === 2) {
         let server = address.split("@")[1];
@@ -74,46 +45,25 @@ let getWebsocketAddress = async function (url) {
     }
 }
 
-let doesSystemExist = async function(url) {
-    if (!url) {
-        return false;
-    }
-    let address = await getWebsocketAddress(url);
-    if (!address) {
-        return false;
-    }
+// Gets system info given URL
+const getSystemInfo = async function (url = String(), options = {players: false, playersTimeout: 250, timeout: 5000}) {
+    let address = await getWebSocketAddress(url);
     let id = Number(url.split("#")[1].split("@")[0]);
-    if (!id) {
-        return false;
-    }
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {resolve(false)}, 5000);
-        let client = new WebSocketClient();
-        client.on = client.on || function () {};
-        client.on('connectFailed', (error) => {
-            reject('Connect Error: ' + error.toString());
-        });
-        client.on("connect", (connection) => {
-            connection.on("error", (error) => {
-                reject('Connection Error: ' + error.toString());
-            });
-            connection.on("message", (message) => {
-                if (message.type === 'utf8' && message.utf8Data.startsWith("{")) {
-                    let parsedMessage = JSON.parse(message.utf8Data);
-                    if (parsedMessage.name === "welcome") {
-                        connection.close();
-                        resolve(true);
-                    } else if (parsedMessage.name === "cannot_join") {
-                        resolve(false);
-                    }
-                }
-            });
-            sendJSON(connection, {
+    if (!address) return {error: "address"};
+    options.timeout = options.timeout || 5000;
+    options.playersTimeout = options.playersTimeout || 250;
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({error: "timeout"})
+        }, options.timeout);
+        let socket = new WebSocket(address, "echo-protocol", {origin: "https://starblast.io"});
+        socket.onopen = function () {
+            socket.send(JSON.stringify({
                 "name": "join",
                 "data": {
                     "spectate": false,
                     "spectate_ship": 1,
-                    "player_name": "PING",
+                    "player_name": "starblast-pinger",
                     "hue": 240,
                     "preferred": id,
                     "bonus": "true",
@@ -122,104 +72,46 @@ let doesSystemExist = async function(url) {
                     "client_ship_id": String(Math.random()).slice(2),
                     "client_tr": 2.799774169921875
                 }
-            });
-        });
-        client.connect(address, 'echo-protocol', "https://starblast.io");
-    });
-}
-
-let getSystemInfo = async function (url, players, playersTimeout) {
-    if (!url) {
-        return;
-    }
-    let address = await getWebsocketAddress(url);
-    let id = Number(url.split("#")[1].split("@")[0]);
-    let welcomeMessage;
-    playersTimeout = playersTimeout || 1000;
-    players = players || false;
-    if (address) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {resolve({})}, 5000);
-            let client = new WebSocketClient();
-            client.on = client.on || function () {};
-            client.on('connectFailed', function (error) {
-                reject('Connect Error: ' + error.toString());
-            });
-            client.on('connect', function (connection) {
-                connection.on('error', function (error) {
-                    reject('Connection Error: ' + error.toString());
-                });
-                connection.on('close', function () {
-                });
-                connection.on('message', function (message) {
-                    if (message.type === 'utf8' && message.utf8Data.startsWith("{")) {
-                        //console.log("Received: ",message.utf8Data);
-                        let parsedMessage = JSON.parse(message.utf8Data);
-                        if (parsedMessage.name === "cannot_join") {
-                            resolve({});
-                        }
-                        if (parsedMessage.name === "welcome") {
-                            welcomeMessage = parsedMessage.data;
-                            //console.log(parsedMessage);
-                            //console.log("players", players)
-                            welcomeMessage.players = {};
-                            if (players) {
-                                //console.log("OK");
-                                parsedMessage.data.mode.max_players = parsedMessage.data.mode.max_players || 0;
-                                let maxPlayers = parsedMessage.data.mode.max_players;
-                                //console.log("max players",maxPlayers)
-                                for (let x=0; x<=maxPlayers*3; x++) {
-                                    sendJSON(connection, {
-                                        "name": "get_name",
-                                        "data": {
-                                            "id": x
-                                        }
-                                    });
+            }));
+        }
+        let output;
+        socket.onmessage = function (message) {
+            let content = message.data;
+            if (typeof content === "string" && content.startsWith("{")) {
+                let data = JSON.parse(content);
+                if (data.name === "welcome") {
+                    output = data.data;
+                    if (options.players) {
+                        output.players = {};
+                        for (let x=0; x<=output.mode.max_players*3; x++) {
+                            socket.send(JSON.stringify({
+                                "name": "get_name",
+                                "data": {
+                                    "id": x
                                 }
-                                setTimeout(() => {
-                                    connection.close();
-                                    resolve(welcomeMessage);
-                                }, playersTimeout);
-                            } else {
-                                connection.close();
-                                resolve(JSON.parse(message.utf8Data).data);
-                            }
-                        } else if (parsedMessage.name === "player_name") {
-                            welcomeMessage.players[parsedMessage.data.id] = parsedMessage.data;
-                            if (welcomeMessage.players.length === welcomeMessage.mode.max_players) {
-                                resolve(welcomeMessage);
-                            }
+                            }));
                         }
-                        // connection.close();
-                        // resolve(JSON.parse(message.utf8Data).data);
+                        setTimeout(() => {
+                            socket.close();
+                            resolve(output);
+                        }, options.playersTimeout);
                     } else {
-                        // reject("Invalid response from server.")
+                        socket.close();
+                        resolve(output);
                     }
-                });
-                sendJSON(connection, {
-                    "name": "join",
-                    "data": {
-                        "spectate": false,
-                        "spectate_ship": 1,
-                        "player_name": "PING",
-                        "hue": 240,
-                        "preferred": id,
-                        "bonus": "true",
-                        "steamid": null,
-                        "create": false,
-                        "client_ship_id": String(Math.random()).slice(2),
-                        "client_tr": 2.799774169921875
-                    }
-                });
-            });
-            client.connect(address, 'echo-protocol', "https://starblast.io");
-        });
-    }
-    return new Promise((resolve) => {
-        resolve({});
-    });
+                } else if (data.name === "cannot_join") {
+                    resolve({error: "cannot_join"});
+                } else if (data.name === "player_name") {
+                    output.players[data.data.id] = data.data;
+                }
+            }
+        }
+        socket.onclose = function () {
+            resolve({});
+        }
+    })
 }
 
+module.exports.getWebSocketAddress = getWebSocketAddress;
+module.exports.getSimStatus = getSimStatus;
 module.exports.getSystemInfo = getSystemInfo;
-module.exports.getSimstatus = getSimstatus;
-module.exports.systemExists = doesSystemExist;

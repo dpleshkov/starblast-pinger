@@ -17,9 +17,11 @@ const pinger = require("starblast-pinger");
 pinger.getSystemInfo("https://starblast.io/#1234").then(console.log);
 
 // Get system info with player names.
-// Second value specifies whether or not we want to fetch player names
-// Third value is the value in milliseconds, to spend waiting for player names
-pinger.getSystemInfo("https://starblast.io/#1234", true, 2000).then(console.log);
+pinger.getSystemInfo("https://starblast.io/#1234", {
+    players: false, // Whether or not to fetch player names
+    playersTimeout: 250, // Timeout for fetching player names
+    timeout: 5000 // Timeout for fetching system info in general
+}).then(console.log);
 // Do note that fetching player names is typically a way more expensive action.
 // If fetching names from multiple game systems, it is recommended to do so asynchronously.
 ```

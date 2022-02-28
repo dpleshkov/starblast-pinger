@@ -1,5 +1,5 @@
 // starblast-pinger
-// Copyright 2021 Dmitry Pleshkov
+// Copyright 2022 Dmitry Pleshkov
 
 const {WebSocket} = require("ws");
 const axios = require("axios");
@@ -112,6 +112,12 @@ const getSystemInfo = async function (url = String(), options = {players: false,
     })
 }
 
+const systemExists = async function(url) {
+    let info = await getSystemInfo(url);
+    return !!info.mode;
+}
+
 module.exports.getWebSocketAddress = getWebSocketAddress;
 module.exports.getSimStatus = getSimStatus;
 module.exports.getSystemInfo = getSystemInfo;
+module.exports.systemExists = systemExists;

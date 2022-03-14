@@ -47,69 +47,77 @@ const getWebSocketAddress = async function (url = String()) {
 
 // Gets system info given URL
 const getSystemInfo = async function (url = String(), options = {players: false, playersTimeout: 250, timeout: 5000}) {
-    let address = await getWebSocketAddress(url);
-    let id = Number(url.split("#")[1].split("@")[0]);
-    if (!address) return {error: "address"};
-    options.timeout = options.timeout || 5000;
-    options.playersTimeout = options.playersTimeout || 250;
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({error: "timeout"})
-        }, options.timeout);
-        let socket = new WebSocket(address, "echo-protocol", {origin: "https://starblast.io"});
-        socket.onopen = function () {
-            socket.send(JSON.stringify({
-                "name": "join",
-                "data": {
-                    "spectate": false,
-                    "spectate_ship": 1,
-                    "player_name": "starblast-pinger",
-                    "hue": 240,
-                    "preferred": id,
-                    "bonus": "true",
-                    "steamid": null,
-                    "create": false,
-                    "client_ship_id": String(Math.random()).slice(2),
-                    "client_tr": 2.799774169921875
-                }
-            }));
-        }
-        let output;
-        socket.onmessage = function (message) {
-            let content = message.data;
-            if (typeof content === "string" && content.startsWith("{")) {
-                let data = JSON.parse(content);
-                if (data.name === "welcome") {
-                    output = data.data;
-                    if (options.players) {
-                        output.players = {};
-                        for (let x=0; x<=output.mode.max_players*3; x++) {
-                            socket.send(JSON.stringify({
-                                "name": "get_name",
-                                "data": {
-                                    "id": x
-                                }
-                            }));
+    try {
+        let address = await getWebSocketAddress(url);
+        let id = Number(url.split("#")[1].split("@")[0]);
+        if (!address) return {error: "address"};
+        options.timeout = options.timeout || 5000;
+        options.playersTimeout = options.playersTimeout || 250;
+        return new Promise((resolve) => {
+            try {
+                setTimeout(() => {
+                    resolve({error: "timeout"})
+                }, options.timeout);
+                let socket = new WebSocket(address, "echo-protocol", {origin: "https://starblast.io"});
+                socket.onopen = function () {
+                    socket.send(JSON.stringify({
+                        "name": "join",
+                        "data": {
+                            "spectate": false,
+                            "spectate_ship": 1,
+                            "player_name": "starblast-pinger",
+                            "hue": 240,
+                            "preferred": id,
+                            "bonus": "true",
+                            "steamid": null,
+                            "create": false,
+                            "client_ship_id": String(Math.random()).slice(2),
+                            "client_tr": 2.799774169921875
                         }
-                        setTimeout(() => {
-                            socket.close();
-                            resolve(output);
-                        }, options.playersTimeout);
-                    } else {
-                        socket.close();
-                        resolve(output);
-                    }
-                } else if (data.name === "cannot_join") {
-                    resolve({error: "cannot_join"});
-                } else if (data.name === "player_name") {
-                    output.players[data.data.id] = data.data;
+                    }));
                 }
+                let output;
+                socket.onmessage = function (message) {
+                    let content = message.data;
+                    if (typeof content === "string" && content.startsWith("{")) {
+                        let data = JSON.parse(content);
+                        if (data.name === "welcome") {
+                            output = data.data;
+                            if (options.players) {
+                                output.players = {};
+                                for (let x = 0; x <= output.mode.max_players * 3; x++) {
+                                    socket.send(JSON.stringify({
+                                        "name": "get_name",
+                                        "data": {
+                                            "id": x
+                                        }
+                                    }));
+                                }
+                                setTimeout(() => {
+                                    socket.close();
+                                    resolve(output);
+                                }, options.playersTimeout);
+                            } else {
+                                socket.close();
+                                resolve(output);
+                            }
+                        } else if (data.name === "cannot_join") {
+                            resolve({error: "cannot_join"});
+                        } else if (data.name === "player_name") {
+                            output.players[data.data.id] = data.data;
+                        }
+                    }
+                }
+                socket.onclose = function () {
+                    resolve({"error": "closed"});
+                }
+            } catch {
+                resolve({"error": "error"});
             }
-        }
-        socket.onclose = function () {
-            resolve({});
-        }
-    })
+        });
+    } catch {
+        return {"error":"error"};
+    }
 }
 
 const systemExists = async function(url) {

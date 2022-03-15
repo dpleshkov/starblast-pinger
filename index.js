@@ -111,6 +111,9 @@ const getSystemInfo = async function (url = String(), options = {players: false,
                 socket.onclose = function () {
                     resolve({"error": "closed"});
                 }
+                socket.onerror = function() {
+                    resolve({"error": "error"});
+                }
             } catch {
                 resolve({"error": "error"});
             }

@@ -65,8 +65,11 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
               options.timeout = options.timeout || 5000;
               options.playersTimeout = options.playersTimeout || 250;
               try {
+                  let done = false;
                   setTimeout(() => {
-                      resolve({error: "timeout"})
+                      socket.close();
+                      done = true;
+                      reject(new Error("Timed out"));
                   }, options.timeout);
                   let socket = new WebSocket(address, "echo-protocol", {origin: "https://starblast.io"});
                   socket.onopen = function () {
@@ -86,7 +89,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                           }
                       }));
                   }
-                  let output, done = false;
+                  let output;
                   socket.onmessage = function (message) {
                       let content = message.data;
                       if (typeof content === "string" && content.startsWith("{")) {
@@ -94,7 +97,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                           if (data.name === "welcome") {
                               output = data.data;
                               if (options.players) {
-                                  output.players = new Map();
+                                  output.players = [];
                                   for (let x = 0; x <= output.mode.max_players * 3; x++) {
                                       socket.send(JSON.stringify({
                                           "name": "get_name",
@@ -116,7 +119,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                           } else if (data.name === "cannot_join") {
                               resolve({error: "cannot_join"});
                           } else if (data.name === "player_name") {
-                              output.players.set(data.data.id, data.data);
+                              output.players[data.data.id] = data.data;
                           }
                       }
                   }
@@ -129,12 +132,12 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                       reject(new Error("An error occured while establishing connection to the game"))
                   }
               } catch (e) {
-                  reject(new Error("An unknown error occured. Please contact @dankdmitron if this error shows"))
+                  reject(new Error("An unknown error occured. Please contact @dankdmitron#5029 in Discord if this error shows"))
               }
             }).catch(reject)
         });
     } catch (e) {
-        reject(new Error("An unknown error occured. Please contact @dankdmitron if this error shows"))
+        reject(new Error("An unknown error occured. Please contact @dankdmitron#5029 in Discord if this error shows"))
     }
 }
 

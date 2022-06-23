@@ -144,7 +144,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
 const systemExists = async function(url) {
   try {
     let info = await getSystemInfo(url);
-    return !!info.mode;
+    return true
   }
   catch (e) {
     return false

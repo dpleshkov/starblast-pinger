@@ -145,7 +145,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
     }
 }
 
-const systemExists = async function(url) {
+const canPing = async function(url) {
   try {
     let info = await getSystemInfo(url);
     return true
@@ -158,4 +158,4 @@ const systemExists = async function(url) {
 module.exports.getWebSocketAddress = getWebSocketAddress;
 module.exports.getSimStatus = getSimStatus;
 module.exports.getSystemInfo = getSystemInfo;
-module.exports.systemExists = systemExists;
+module.exports.canPing = canPing;

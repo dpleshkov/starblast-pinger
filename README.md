@@ -28,6 +28,8 @@ Options to pass into the `options` object:
 | preferredRegion | string | Preferred region in case there are multiple games in different regions with the same ID | none |
 | maxGetID | positive integer | To declare the highest player ID to get | 3x the fetching game's capacity (if found) |
 
+Note that if `options` is `null`, `undefined` or omitted, everything will go by their default values
+
 For example:
 ```js
 pinger.getSystemInfo('https://starblast.io/#5349', {

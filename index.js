@@ -21,7 +21,7 @@ const parseLink = function (link) {
   return {
     id: match?.[8] != null ? +match[8] : null,
     server: match?.[9] != null ? {
-      ip: match[9],
+      ip: match[10],
       port: match?.[11] != null ? +match[11] : null
     } : null
   }

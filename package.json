@@ -1,6 +1,6 @@
 {
   "name": "starblast-pinger",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Utility tool to ping and get the info of a running Starblast game lobby.",
   "main": "index.js",
   "scripts": {

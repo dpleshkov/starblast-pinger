@@ -22,7 +22,7 @@ Options to pass into the `options` object:
 
 | Option | Type |Description | Default value<br>(if null/undefined or omitted) |
 | - | - | - | - |
-| players | boolean | Whether or not to fetch player names<br>Please note that fetching player names is typically a way more expensive action. | true |
+| players | boolean | Whether or not to fetch player names<br>Please note that fetching player names is typically a way more expensive action. | false |
 | timeout | positive integer | Timeout for fetching system info in general | 5000 |
 | playersTimeout | positive integer | Timeout for fetching player names, counting after system info is successfully fetched | 3000 |
 | preferredRegion | string | Preferred region in case there are multiple games in different regions with the same ID | none |

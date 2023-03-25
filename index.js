@@ -28,6 +28,8 @@ const getJoinPacketName = async function () {
     let gameScript = scripts.at(-1) ?? null;
     
     if (gameScript == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 1]");
+
+    gameScript = String(gameScript);
     
     // get the variable and its attribute name of join packet message [Process 2]
     let joinParamSearcher = /"ecp_verified".+?socket\.onopen\s*=.+?\.send.+?name:([^,]+?),/;
@@ -47,7 +49,7 @@ const getJoinPacketName = async function () {
 
     if (joinPacketName == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 3]");
 
-    return joinPacketName;
+    return String(joinPacketName);
 }
 
 // converts link into game and server address

@@ -130,18 +130,13 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                   let generalTimeout = setTimeout(setError, options.timeout, "Connection timed out"), playersTimeout;
                   socket.on('open', function () {
                       socket.send(JSON.stringify({
-                          "name": info.joinPacketName,
-                          "data": {
-                              "spectate": false,
-                              "spectate_ship": 1,
-                              "player_name": "starblast-pinger",
-                              "hue": 240,
-                              "preferred": info.id,
-                              "bonus": "true",
-                              "steamid": null,
-                              "create": false,
-                              "client_ship_id": String(Math.random()).slice(2),
-                              "client_tr": 2.799774169921875
+                          name: info.joinPacketName,
+                          data: {
+                            player_name: "starblast-pinger",
+                            hue: Math.floor(Math.random() * 360),
+                            preferred: info.id,
+                            bonus: true,
+                            create: false
                           }
                       }));
                   });

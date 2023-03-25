@@ -151,9 +151,9 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                                   output.players = [];
                                   for (let x = 0; x <= (Math.trunc(Math.max(options.maxGetID, 0)) || output.mode.max_players * 3); ++x) {
                                       socket.send(JSON.stringify({
-                                          "name": "get_name",
-                                          "data": {
-                                              "id": x
+                                          name: "get_name",
+                                          data: {
+                                              id: x
                                           }
                                       }));
                                   }

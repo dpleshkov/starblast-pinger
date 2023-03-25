@@ -4,6 +4,14 @@
 const { WebSocket } = require("ws");
 const axios = require("axios");
 
+const scriptRegex = /<script>([^]+?)<\/script>/g;
+const joinParamSearcher = /"ecp_verified".+?socket\.onopen\s*=.+?\.send.+?name:([^]+?),data:/;
+
+// parse string to value (if it's a JSON)
+const parseValue = function (str) {
+  return JSON.parse(String(str).replace(/^('|`)(.+)\1$/, '"$2"'));
+}
+
 // Returns simstatus.json
 const getSimStatus = async function () {
   try {
@@ -20,8 +28,6 @@ const getJoinPacketName = async function () {
     let scripts = await axios.get("https://starblast.io");
 
     // get all stuffs inside script tags
-    let scriptRegex = /<script>([^]+?)<\/script>/g;
-
     scripts = scripts.data.match(scriptRegex)?.map?.(e => e.replace(scriptRegex, "$1")) ?? [];
 
     // get the last script (game script) [Process 1]
@@ -32,24 +38,25 @@ const getJoinPacketName = async function () {
     gameScript = String(gameScript);
     
     // get the variable and its attribute name of join packet message [Process 2]
-    let joinParamSearcher = /"ecp_verified".+?socket\.onopen\s*=.+?\.send.+?name:([^,]+?),/;
-
     let joinPacketVariable = gameScript.match(joinParamSearcher)?.[1] ?? null;
 
     if (joinPacketVariable == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 2]");
     
-    // if it appears to be a string, return it
-    joinPacketVariable = String(joinPacketVariable);
-    if (joinPacketVariable.length > 1 && joinPacketVariable[0] == joinPacketVariable.at(-1) && "\"'`".includes(joinPacketVariable[0])) return joinPacketVariable;
+    // if it appears to be a value, return it
+    try { return parseValue(joinPacketVariable) } catch (e) {}
 
-    let [obfVar, obfAttr, ...notUsed] = joinPacketVariable.split(".");
+    let [obfVar, obfAttr, ...notUsed] = String(joinPacketVariable).split(".");
     
     // search through script to get value of it [Process 3]
-    let joinPacketName = gameScript.match(new RegExp(obfVar + "=.+?" + obfAttr + ':"([^"]+)"'))?.[1];
+    let joinPacketName = gameScript.match(new RegExp(obfVar + "=.+?" + obfAttr + ":([^]+?),([lI10O]{5}:|\})"))?.[1];
 
-    if (joinPacketName == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 3]");
-
-    return String(joinPacketName);
+    try {
+      if (joinPacketName == null) throw "null";
+      return parseValue(joinPacketName);
+    }
+    catch (e) {
+      throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 3]");
+    }
 }
 
 // converts link into game and server address

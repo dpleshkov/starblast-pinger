@@ -9,8 +9,8 @@
   "author": "Dmitry Pleshkov",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.26.0",
-    "ws": "^8.5.0"
+    "axios": "^1.3.4",
+    "ws": "^8.13.0"
   },
   "repository": {
     "type": "git",

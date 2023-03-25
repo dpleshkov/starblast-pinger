@@ -1,7 +1,7 @@
 // starblast-pinger
 // Copyright 2022 Dmitry Pleshkov
 
-const {WebSocket} = require("ws");
+const { WebSocket } = require("ws");
 const axios = require("axios");
 
 // Returns simstatus.json
@@ -13,6 +13,43 @@ const getSimStatus = async function () {
   catch (e) {
     throw new Error('Failed to fetch the serverlist file')
   }
+}
+
+// Get join packet name
+const getJoinPacketName = async function () {
+    let scripts = await axios.get("https://starblast.io");
+
+    // get all stuffs inside script tags
+    let scriptRegex = /<script>([^]+?)<\/script>/g;
+
+    scripts = scripts.data.match(scriptRegex)?.map?.(e => e.replace(scriptRegex, "$1")) ?? [];
+
+    // get the last script (game script) [Process 1]
+    let gameScript = scripts.at(-1) ?? null;
+    
+    if (gameScript == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 1]");
+
+    gameScript = String(gameScript);
+    
+    // get the variable and its attribute name of join packet message [Process 2]
+    let joinParamSearcher = /"ecp_verified".+?socket\.onopen\s*=.+?\.send.+?name:([^,]+?),/;
+
+    let joinPacketVariable = gameScript.match(joinParamSearcher)?.[1] ?? null;
+
+    if (joinPacketVariable == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 2]");
+    
+    // if it appears to be a string, return it
+    joinPacketVariable = String(joinPacketVariable);
+    if (joinPacketVariable.length > 1 && joinPacketVariable[0] == joinPacketVariable.at(-1) && "\"'`".includes(joinPacketVariable[0])) return joinPacketVariable;
+
+    let [obfVar, obfAttr, ...notUsed] = joinPacketVariable.split(".");
+    
+    // search through script to get value of it [Process 3]
+    let joinPacketName = gameScript.match(new RegExp(obfVar + "=.+?" + obfAttr + ':"([^"]+)"'))?.[1];
+
+    if (joinPacketName == null) throw new Error("Failed to get join message packet name. Please contact dankdmitron#5029 if this happens. [Process 3]");
+
+    return String(joinPacketName);
 }
 
 // converts link into game and server address
@@ -27,7 +64,7 @@ const parseLink = function (link) {
   }
 }
 
-// Gets websocket address given game link
+// Gets websocket address given game link, as well as join packet message
 const getWebSocketAddress = async function (url = String(), preferredRegion) {
     if (!url) {
         throw new TypeError("System URL not provided.");
@@ -55,6 +92,10 @@ const getWebSocketAddress = async function (url = String(), preferredRegion) {
     }
     if (address.server == null) throw new Error("No public games found with given game ID. Please provide server address in the link if you want to ping a custom game");
     address.server.ws = `wss://${address.server.ip.replace(/\./g, "-")}.starblast.io:${address.server.port}/`;
+
+    // assign join packet name into it
+    address.joinPacketName = await getJoinPacketName();
+
     return address
 }
 
@@ -82,7 +123,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                   let generalTimeout = setTimeout(setError, options.timeout, "Connection timed out"), playersTimeout;
                   socket.on('open', function () {
                       socket.send(JSON.stringify({
-                          "name": "join",
+                          "name": info.joinPacketName,
                           "data": {
                               "spectate": false,
                               "spectate_ship": 1,
@@ -126,7 +167,7 @@ const getSystemInfo = function (url = String(), options = {preferredRegion: null
                       clearTimeout(generalTimeout);
                       clearTimeout(playersTimeout);
                       if (output) {
-                        delete output.mode.restore_ship;
+                        delete output?.mode?.restore_ship;
                         output.players?.sort?.((a, b) => a.id - b.id);
                         resolve(output)
                       }
